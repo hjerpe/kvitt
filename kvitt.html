@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kvitt — Cash overview</title>
+<style>
+  :root{
+    --blue:#1f4e9c; --blue-dark:#173d7c; --blue-soft:#dbe6f6; --blue-pale:#eaf1fb;
+    --red:#b32424; --red-soft:#f6dcdc;
+    --amber:#8a6d1a; --amber-soft:#f3ead0;
+    --green:#1c7a3d; --green-soft:#ddefe2;
+    --ink:#1c2430; --ink-2:#42506032; --muted:#6b7684; --muted-2:#9aa4b0;
+    --line:#e4e8ee; --line-soft:#eef1f5;
+    --bg:#ffffff; --bg-side:#ffffff; --bg-page:#fbfcfe;
+    --radius:8px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--font);color:var(--ink);background:var(--bg-page);font-size:14px;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .app{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+
+  /* ── Sidebar ── */
+  .side{background:var(--bg-side);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px}
+  .brand{display:flex;align-items:center;gap:9px;padding:2px 8px 20px}
+  .brand-mark{width:26px;height:26px;border-radius:6px;background:var(--blue);position:relative;flex:0 0 auto}
+  .brand-mark::after{content:"";position:absolute;inset:6px;border-radius:3px;background:#fff;opacity:.92;clip-path:polygon(0 0,100% 0,100% 55%,55% 55%,55% 100%,0 100%)}
+  .brand-name{font-size:19px;font-weight:800;letter-spacing:.2px}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:999px;border:none;background:none;font-size:14px;color:var(--ink);text-align:left;width:100%}
+  .nav-item .dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted-2);flex:0 0 auto}
+  .nav-item:hover{background:var(--line-soft)}
+  .nav-item.active{background:var(--blue-soft);font-weight:700;color:var(--blue-dark)}
+  .nav-item.active .dot{border-color:var(--blue)}
+  .nav-item.stub{color:var(--muted-2)}
+  .nav-item.stub .dot{border-color:var(--line)}
+  .nav-item.stub:hover{background:var(--line-soft);color:var(--muted)}
+  .side-bottom{margin-top:auto;border-top:1px solid var(--line);padding-top:10px}
+
+  /* ── Topbar ── */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .topbar{display:flex;align-items:center;gap:14px;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 26px;position:sticky;top:0;z-index:20}
+  .crumbs{font-weight:700;font-size:14px;white-space:nowrap}
+  .crumbs .sep{color:var(--muted-2);font-weight:400;margin:0 6px}
+  .crumbs .dim{color:var(--muted);font-weight:400}
+  .search{flex:1;max-width:320px;margin-left:auto}
+  .search input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--line);border-radius:var(--radius);background:#f5f7fa url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239aa4b0' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") 10px 50% no-repeat;font-size:13px}
+  .range-btn{border:1px solid var(--line);background:#fff;border-radius:var(--radius);padding:8px 12px;font-size:13px;white-space:nowrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700}
+  .pill .p-dot{width:7px;height:7px;border-radius:50%}
+  .pill.live{background:var(--green-soft);color:var(--green)}
+  .pill.live .p-dot{background:var(--green)}
+  .pill.demo{background:var(--amber-soft);color:var(--amber)}
+  .pill.demo .p-dot{background:var(--amber)}
+  .synced{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+  /* ── Page scaffolding ── */
+  .page{padding:24px 26px 40px;max-width:1280px;width:100%}
+  .screen{display:none}
+  .screen.on{display:block}
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px}
+  h1{font-size:26px;letter-spacing:-.2px}
+  .sub{color:var(--muted);margin-top:5px;font-size:14px}
+  h2{font-size:16.5px;margin-bottom:12px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px}
+  .badge{display:inline-block;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+  .badge.red{background:var(--red-soft);color:var(--red)}
+  .badge.amber{background:var(--amber-soft);color:var(--amber)}
+  .badge.green{background:var(--green-soft);color:var(--green)}
+  .badge.blue{background:var(--blue-soft);color:var(--blue-dark)}
+  .badge.gray{background:var(--line-soft);color:var(--muted)}
+
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line);margin-bottom:22px}
+  .kpi{padding:6px 18px 16px;border-left:1px solid var(--line)}
+  .kpi:first-child{border-left:none;padding-left:0}
+  .kpi .k-label{color:var(--muted);font-size:13px}
+  .kpi .k-value{font-size:27px;font-weight:800;margin:3px 0 2px;letter-spacing:-.3px}
+  .kpi .k-note{font-size:12.5px;color:var(--muted)}
+  .kpi .k-note.red{color:var(--red);font-weight:600}
+  .kpi .k-note.amber{color:var(--amber);font-weight:600}
+  .kpi .k-note.green{color:var(--green);font-weight:600}
+
+  .two-col{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:26px;align-items:start}
+  .chart-head{display:flex;align-items:center;gap:18px;margin-bottom:8px;flex-wrap:wrap}
+  .legend{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:13px}
+  .legend .swatch{width:22px;height:3.5px;border-radius:2px}
+  svg text{font-family:var(--font)}
+
+  /* Flow table under forecast */
+  .flow-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+  .flow-table th,.flow-table td{padding:4px 2px;text-align:center;font-weight:400;color:var(--muted-2)}
+  .flow-table th.hl{color:var(--ink);font-weight:700}
+  .flow-table td.row-label{text-align:right;padding-right:8px;font-weight:700}
+  .flow-table td.pos{color:var(--green);font-weight:700}
+  .flow-table td.neg{color:var(--red);font-weight:700}
+  .flow-table tr.receipts td.row-label{color:var(--green)}
+  .flow-table tr.payments td.row-label{color:var(--red)}
+
+  /* Action queue */
+  .aq-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+  .aq-count{color:var(--muted);font-size:13px}
+  .aq{border-top:1px solid var(--line)}
+  .aq-item{display:grid;grid-template-columns:16px 1fr auto;gap:4px 10px;padding:14px 10px;border-bottom:1px solid var(--line);align-items:start;cursor:pointer}
+  .aq-item:hover{background:var(--bg-page)}
+  .aq-item.hl{background:var(--blue-pale)}
+  .aq-dot{width:9px;height:9px;border-radius:50%;margin-top:5px}
+  .aq-dot.red{background:var(--red)} .aq-dot.amber{background:#a8891f}
+  .aq-title{font-size:14px}
+  .aq-title .verb{font-weight:800}
+  .aq-title .verb.red{color:var(--red)} .aq-title .verb.amber{color:var(--amber)}
+  .aq-title .who{font-weight:700;margin-left:6px}
+  .aq-amount{font-weight:800;white-space:nowrap}
+  .aq-why{grid-column:2;color:var(--muted);font-size:13px}
+  .aq-foot{grid-column:2/4;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+  .aq-impact{font-size:12.5px;font-weight:700}
+  .aq-impact.red{color:var(--red)} .aq-impact.gray{color:var(--muted)}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:var(--radius);padding:7px 16px;font-size:13px;font-weight:600}
+  .btn:hover{border-color:var(--muted-2)}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+  .btn.primary:hover{background:var(--blue-dark)}
+  .btn.block{display:block;width:100%;padding:11px;font-size:14px}
+  .btn.link{border:none;background:none;color:var(--blue);font-weight:600}
+
+  /* ── Action detail ── */
+  .hero-badges{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+  .callout{display:flex;gap:12px;background:var(--blue-pale);border:1px solid var(--blue-soft);border-radius:10px;padding:14px 16px;margin-bottom:20px}
+  .callout .ci{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;font-style:italic;font-family:Georgia,serif}
+  .callout b{display:block;margin-bottom:3px}
+  .kv-table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .kv-table td{padding:8px 4px;border-bottom:1px solid var(--line-soft)}
+  .kv-table td.k{color:var(--muted)}
+  .kv-table td.v{font-weight:700;text-align:right;padding-right:22px}
+  .kv-table td.v.red{color:var(--red)}
+  .why-list{list-style:none;margin-top:8px}
+  .why-list li{position:relative;padding:4px 0 4px 18px;font-size:13.5px}
+  .why-list li::before{content:"";position:absolute;left:2px;top:11px;width:6px;height:6px;border-radius:50%;background:var(--blue)}
+  .src-row{display:flex;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .src-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--radius);padding:8px 12px;font-size:12.5px;background:#fff}
+  .src-chip .s-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .src-chip b{font-weight:700}
+  .src-chip .t{color:var(--muted)}
+  .draft-card{padding:18px}
+  .draft-card h2{margin-bottom:10px}
+  .draft-badges{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .field{margin-bottom:10px}
+  .field .f-wrap{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--radius);padding:9px 12px;background:#fff}
+  .field .f-label{color:var(--muted);font-size:13px;flex:0 0 auto}
+  .field input{border:none;outline:none;flex:1;font-size:13.5px;font-family:inherit;background:transparent}
+  .field .f-top-label{display:block;color:var(--muted);font-size:12.5px;margin-bottom:5px}
+  .field textarea{width:100%;border:1px solid var(--line);border-radius:var(--radius);padding:11px 12px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:170px;line-height:1.5}
+  .draft-actions{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+
+  /* ── Benchmarks ── */
+  .bm-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+  .bm-card{padding:15px 16px}
+  .bm-card .b-label{color:var(--muted);font-size:13px}
+  .bm-card .b-value{font-size:25px;font-weight:800;margin:4px 0 8px}
+  .bm-card .b-delta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .bm-card .b-delta .d{font-size:13px;font-weight:700}
+  .bm-card .b-delta .d.red{color:var(--red)} .bm-card .b-delta .d.green{color:var(--green)} .bm-card .b-delta .d.ink{color:var(--ink)}
+  .bm-bar{height:5px;border-radius:3px;background:var(--line);position:relative;margin-bottom:9px}
+  .bm-bar .tick{position:absolute;top:-3px;width:2px;height:11px;background:var(--muted-2)}
+  .bm-bar .pos-dot{position:absolute;top:-2.5px;width:10px;height:10px;border-radius:50%;transform:translateX(-50%)}
+  .bm-card .b-median{color:var(--muted);font-size:12px}
+  .bm-table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .bm-table th{text-align:left;color:var(--muted);font-weight:600;font-size:12.5px;border-bottom:1px solid var(--line);padding:8px 4px}
+  .bm-table th.r,.bm-table td.r{text-align:right}
+  .bm-table td{padding:10px 4px;border-bottom:1px solid var(--line-soft)}
+  .bm-table td.delay{font-weight:700;text-align:right}
+  .bm-table td.members{color:var(--muted);text-align:right}
+  .bm-table tr.suppressed td{color:var(--muted-2)}
+  .bm-table tr.suppressed td.delay{font-style:italic;font-weight:400}
+  .note{background:var(--blue-pale);border:1px solid var(--blue-soft);border-radius:var(--radius);padding:10px 12px;font-size:12.5px;color:var(--ink);margin-top:12px}
+  .caption{color:var(--muted);font-size:12.5px;margin-top:10px;line-height:1.5}
+
+  /* ── Decision trace ── */
+  .trace-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:26px;align-items:start}
+  .tl{list-style:none;position:relative;margin-left:6px}
+  .tl::before{content:"";position:absolute;left:7px;top:10px;bottom:26px;width:2px;background:var(--line)}
+  .tl-item{position:relative;padding:0 0 20px 30px}
+  .tl-item .tl-dot{position:absolute;left:0;top:4px;width:14px;height:14px;border-radius:50%;border:3px solid var(--blue);background:#fff}
+  .tl-item.final .tl-dot{background:var(--blue)}
+  .tl-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .tl-title{font-weight:700;font-size:14px}
+  .tl-src{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .tl-detail{color:var(--muted);font-size:13px;margin-top:3px}
+  .rule-box{border:1px solid var(--line);background:var(--bg-page);border-radius:var(--radius);padding:10px 12px;font-size:12.5px;margin-top:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink)}
+  .meta-card{padding:18px}
+  .meta-card h2{margin-bottom:6px}
+  .meta-list{list-style:none}
+  .meta-list li{padding:9px 0;border-bottom:1px solid var(--line-soft)}
+  .meta-list .m-k{color:var(--muted);font-size:12.5px}
+  .meta-list .m-v{font-weight:700;margin-top:2px;display:flex;align-items:center;gap:7px}
+  .meta-list .m-dot{width:8px;height:8px;border-radius:50%}
+  .meta-list .m-dot.green{background:var(--green)} .meta-list .m-dot.amber{background:#a8891f}
+
+  /* ── Next steps (concept) ── */
+  .ns-flow{display:grid;grid-template-columns:1fr 26px 1fr 26px 1fr;gap:10px;align-items:stretch;margin:6px 0 22px}
+  .ns-step{padding:18px}
+  .ns-step .n{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+  .ns-step h3{font-size:15px;margin-bottom:6px}
+  .ns-step p{color:var(--muted);font-size:13px;line-height:1.55}
+  .ns-arrow{align-self:center;text-align:center;color:var(--muted-2);font-size:20px}
+  .ns-pipe{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .ns-pipe .chip{border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12px;color:var(--muted);background:var(--bg-page)}
+  .ns-benefits{list-style:none;margin-top:10px}
+  .ns-benefits li{position:relative;padding:4px 0 4px 20px;font-size:13.5px}
+  .ns-benefits li::before{content:"\2713";position:absolute;left:0;color:var(--green);font-weight:800}
+  .ns-quote{border-left:3px solid var(--blue-soft);padding:4px 0 4px 14px;margin-top:18px;color:var(--ink);font-size:14px;font-style:italic}
+  @media (max-width:1024px){.ns-flow{grid-template-columns:1fr}.ns-arrow{transform:rotate(90deg)}}
+
+  /* ── Modal ── */
+  .overlay{position:fixed;inset:0;background:rgba(18,26,38,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .overlay.hidden{display:none}
+  .modal{background:#fff;border-radius:12px;max-width:470px;width:100%;padding:26px 26px 22px;box-shadow:0 24px 60px rgba(10,20,40,.35);max-height:92vh;overflow:auto}
+  .modal .m-brand{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .modal h2{font-size:19px;margin-bottom:6px}
+  .modal .m-sub{color:var(--muted);font-size:13.5px;line-height:1.55;margin-bottom:16px}
+  .modal label{display:block;font-weight:700;font-size:13px;margin:12px 0 5px}
+  .modal label .opt{color:var(--muted);font-weight:400}
+  .modal input[type=password],.modal input[type=text]{width:100%;border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;font-size:13.5px;font-family:inherit}
+  .modal details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  .modal summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--blue-dark)}
+  .modal .m-note{background:var(--amber-soft);border-radius:var(--radius);padding:9px 12px;font-size:12.5px;color:var(--amber);margin-top:14px}
+  .modal .m-mem{color:var(--muted);font-size:12px;margin-top:12px;line-height:1.5}
+  .modal .m-actions{display:flex;gap:10px;margin-top:16px}
+  .modal .m-actions .btn{flex:1;padding:10px}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:999px;padding:9px 18px;font-size:13px;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.show{opacity:1}
+
+  @media (max-width:1024px){
+    .two-col,.trace-grid{grid-template-columns:1fr}
+    .kpis,.bm-cards{grid-template-columns:repeat(2,1fr)}
+    .kpi{padding-left:18px;border-left:none}
+  }
+  @media (max-width:760px){
+    .app{grid-template-columns:1fr}
+    .side{flex-direction:row;align-items:center;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:10px}
+    .nav{flex-direction:row}
+    .side-bottom{display:none}
+    .brand{padding:0 10px 0 0}
+    .kpis,.bm-cards{grid-template-columns:1fr}
+    .search{display:none}
+  }
+</style>
+</head>
+<body>
+<!--
+  ═════════════════════════════════════════════════════════════════════
+  KVITT — product mockup (hackathon build, 25 Aug 2026)
+
+  HOW TO REPLACE MOCK DATA WITH REAL DATA
+  ─────────────────────────────────────────
+  1. All rendering reads from the single KVITT_DATA object below
+     (search for "KVITT_DATA"). Nothing is hard-coded in the markup.
+  2. Option A (fastest): paste values from your sanitized fixtures
+     (fixtures/zwapgrid-sales-invoices.json, zwapgrid-supplier-invoices.json,
+     open-payments-balances.json, open-payments-transactions.json)
+     into KVITT_DATA and set "provenance" to SNAPSHOT.
+  3. Option B (live): implement the adapter stubs in the ADAPTERS section
+     (search for "ADAPTERS"). Each stub documents its endpoint and must
+     return the same internal shape KVITT_DATA uses. Set provenance LIVE.
+  4. Credentials are collected by the startup modal and kept ONLY in the
+     in-memory `session` object. Never write them to localStorage,
+     cookies, or the DOM.
+  ═════════════════════════════════════════════════════════════════════
+-->
+
+<div class="app">
+  <!-- ── Sidebar ── -->
+  <aside class="side">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">Kvitt</div></div>
+    <nav class="nav" id="nav">
+      <button class="nav-item active" data-screen="overview"><span class="dot"></span>Overview</button>
+      <button class="nav-item stub" data-screen="_stub" data-name="Cash Forecast"><span class="dot"></span>Cash Forecast</button>
+      <button class="nav-item stub" data-screen="_stub" data-name="Receivables"><span class="dot"></span>Receivables</button>
+      <button class="nav-item stub" data-screen="_stub" data-name="Payables"><span class="dot"></span>Payables</button>
+      <button class="nav-item" data-screen="action"><span class="dot"></span>Actions</button>
+      <button class="nav-item" data-screen="benchmarks"><span class="dot"></span>Benchmarks</button>
+      <button class="nav-item stub" data-screen="_stub" data-name="Reports"><span class="dot"></span>Reports</button>
+      <button class="nav-item" data-screen="next"><span class="dot"></span>Next steps</button>
+    </nav>
+    <div class="side-bottom">
+      <button class="nav-item stub" data-screen="_stub" data-name="Settings"><span class="dot"></span>Settings</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <header class="topbar">
+      <div class="crumbs" id="crumbs">Acme Corp</div>
+      <div class="search"><input type="search" placeholder="Search invoices, customers" aria-label="Search invoices, customers"></div>
+      <button class="range-btn">Last 14 days &nbsp;⌄</button>
+      <button class="range-btn" id="dataToggle" title="Switch between live vendor data and the synthetic demo set">Loading…</button>
+      <span class="pill demo" id="livePill"><span class="p-dot"></span><span id="livePillText">Demo data</span></span>
+      <span class="synced" id="synced">Last synced: —</span>
+      <div class="avatar">AC</div>
+    </header>
+
+    <main class="page">
+
+      <!-- ════════ SCREEN 1 · Cash overview ════════ -->
+      <section class="screen on" id="screen-overview">
+        <div class="page-head">
+          <div>
+            <h1>Cash overview</h1>
+            <p class="sub" id="ov-sub"></p>
+          </div>
+        </div>
+
+        <div class="kpis" id="kpis"></div>
+
+        <div class="two-col">
+          <div>
+            <div class="chart-head">
+              <h2 style="margin:0">14-day cash forecast</h2>
+              <span class="legend"><span class="swatch" style="background:var(--blue)"></span>Projected balance</span>
+              <span class="legend"><span class="swatch" style="background:var(--muted-2)"></span>Minimum buffer</span>
+            </div>
+            <div id="forecastChart"></div>
+            <table class="flow-table" id="flowTable"></table>
+          </div>
+
+          <div>
+            <div class="aq-head">
+              <h2 style="margin:0">Action queue</h2>
+              <span class="aq-count" id="aqCount"></span>
+            </div>
+            <div class="aq" id="actionQueue"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ SCREEN 2 · Action detail ════════ -->
+      <section class="screen" id="screen-action">
+        <div class="page-head">
+          <div>
+            <h1 id="ad-title"></h1>
+            <p class="sub" id="ad-sub"></p>
+            <div class="hero-badges" id="ad-badges"></div>
+          </div>
+          <button class="btn">More actions&nbsp;&nbsp;⌄</button>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <div class="callout" id="ad-callout"></div>
+
+            <h2>Invoice &amp; customer summary</h2>
+            <table class="kv-table" id="ad-summary"></table>
+
+            <div class="chart-head" style="margin-top:22px">
+              <h2 style="margin:0">Payment behaviour — days late per invoice</h2>
+              <span class="legend"><span class="swatch" style="background:#aab3bd;height:9px;width:14px"></span>Settled</span>
+              <span class="legend"><span class="swatch" style="background:var(--red);height:9px;width:14px"></span>Unpaid</span>
+            </div>
+            <div id="delayChart"></div>
+            <p class="caption" id="ad-delay-caption">Grey bars show how many days after the due date each settled invoice was paid.</p>
+
+            <h2 style="margin-top:22px">Why this action?</h2>
+            <ul class="why-list" id="ad-why"></ul>
+
+            <div class="src-row" id="ad-sources"></div>
+          </div>
+
+          <div class="card draft-card">
+            <h2>Draft reminder</h2>
+            <div class="draft-badges">
+              <span class="badge amber">AI-assisted draft</span>
+              <span class="badge gray">Human approval required</span>
+            </div>
+            <div class="field"><div class="f-wrap"><span class="f-label">To</span><input id="draftTo" value=""></div></div>
+            <div class="field"><div class="f-wrap"><span class="f-label">Subject</span><input id="draftSubject" value=""></div></div>
+            <div class="field">
+              <span class="f-top-label">Message</span>
+              <textarea id="draftBody"></textarea>
+            </div>
+            <div class="draft-actions">
+              <button class="btn primary block" onclick="toast('Sending is wired in the live build, not in this mockup')">Review and send</button>
+              <button class="btn block" onclick="toast('Draft saved in this session')">Save draft</button>
+              <button class="btn link block" onclick="toast('Marked as contacted in this session')">Mark as contacted</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ SCREEN 3 · Benchmarks ════════ -->
+      <section class="screen" id="screen-benchmarks">
+        <div class="page-head">
+          <div>
+            <h1>Industry benchmarks</h1>
+            <p class="sub" id="bm-sub"></p>
+          </div>
+          <button class="btn">Professional services&nbsp;&nbsp;⌄</button>
+        </div>
+
+        <div class="bm-cards" id="bmCards"></div>
+
+        <div class="two-col">
+          <div>
+            <div class="chart-head">
+              <h2 style="margin:0">Seasonal cash-flow pattern</h2>
+              <span class="legend"><span class="swatch" style="background:var(--blue)"></span><span id="bm-company"></span></span>
+              <span class="legend"><span class="swatch" style="background:var(--muted-2)"></span>Industry median</span>
+            </div>
+            <div id="seasonalChart"></div>
+            <p class="caption" id="bm-caption"></p>
+          </div>
+          <div>
+            <h2>Customer payment delay by industry</h2>
+            <table class="bm-table">
+              <thead><tr><th>Industry</th><th class="r">Median delay</th><th class="r">Members</th></tr></thead>
+              <tbody id="bmTable"></tbody>
+            </table>
+            <div class="note" id="bmSuppressNote"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ SCREEN 4 · Decision trace ════════ -->
+      <section class="screen" id="screen-trace">
+        <div class="page-head">
+          <div>
+            <span class="badge gray" style="margin-bottom:10px">Appendix</span>
+            <h1 id="tr-title"></h1>
+            <p class="sub" id="tr-sub"></p>
+          </div>
+        </div>
+
+        <div class="trace-grid">
+          <div>
+            <h2>Decision timeline</h2>
+            <ul class="tl" id="traceTimeline"></ul>
+            <div class="rule-box" id="ruleBox"></div>
+          </div>
+          <div class="card meta-card">
+            <h2>Decision metadata</h2>
+            <ul class="meta-list" id="traceMeta"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ SCREEN 5 · Next steps (concept, slide 3) ════════ -->
+      <section class="screen" id="screen-next">
+        <div class="page-head">
+          <div>
+            <span class="badge blue" style="margin-bottom:10px">Planned for a later release</span>
+            <h1>Secure Aggregation &amp; Benchmarking</h1>
+            <p class="sub">How Kvitt turns each member's financial signals into an industry-wide reference without exposing any single company's data.</p>
+          </div>
+        </div>
+
+        <div class="ns-flow">
+          <div class="card ns-step">
+            <div class="n">1</div>
+            <h3>Contribute</h3>
+            <p>Every member connects ERP and bank. Only anonymised, standardised signals leave each company; company-level records never do.</p>
+            <div class="ns-pipe">
+              <span class="chip">Company 1 · ERP + bank</span>
+              <span class="chip">Company 2 · ERP + bank</span>
+              <span class="chip">Company 3 · ERP + bank</span>
+              <span class="chip">+ 124 members · 9 industries</span>
+            </div>
+          </div>
+          <div class="ns-arrow">→</div>
+          <div class="card ns-step">
+            <div class="n">2</div>
+            <h3>Aggregate</h3>
+            <p>Cross-company intelligence, privacy-preserving. No company-level record ever leaves the boundary.</p>
+            <div class="ns-pipe">
+              <span class="chip">Standardise</span>
+              <span class="chip">Aggregate across members</span>
+              <span class="chip">Suppress segments below k&nbsp;=&nbsp;5</span>
+            </div>
+          </div>
+          <div class="ns-arrow">→</div>
+          <div class="card ns-step">
+            <div class="n">3</div>
+            <h3>Receive</h3>
+            <p>Industry benchmarks and insights delivered continuously to every member.</p>
+            <ul class="ns-benefits">
+              <li>Payment-delay benchmarks</li>
+              <li>DSO &amp; overdue exposure</li>
+              <li>Cash-buffer benchmarks</li>
+              <li>Seasonal trends</li>
+              <li>Relative performance</li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="ns-quote">Each company receives more intelligence than it contributes, without exposing company-specific data.</p>
+        <div class="note" style="max-width:760px">Aggregates are released only where at least five members contribute to a segment. Below that threshold the segment is suppressed, so no single company's position can be derived. The Benchmarks screen shows this guarantee in the interface: the Energy segment (3 members) is suppressed.</div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="kvitt-mock.js"></script>
+<script>
+/* ═════════════════════════════════════════════════════════════════════
+   SESSION — credentials are held by the backend, never by this page.
+   This only tracks which kind of data is on screen.
+   ═════════════════════════════════════════════════════════════════════ */
+const session = {
+  mode: 'SYNTHETIC'       // SYNTHETIC | SNAPSHOT | LIVE; kvitt-live.js sets LIVE
+};
+
+let KVITT_DATA = KvittMock.create();
+
+/* ═════════════════════════════════════════════════════════════════════
+   RENDERING
+   ═════════════════════════════════════════════════════════════════════ */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function renderTopbar(crumbTrail) {
+  const m = KVITT_DATA.meta;
+  $('synced').textContent = 'Last synced: ' + m.lastSynced;
+  const parts = [ '<span>'+esc(m.company)+'</span>' ]
+    .concat((crumbTrail||[]).map((c,i,arr) =>
+      '<span class="sep">\u203a</span><span class="'+(i<arr.length-1?'dim':'')+'">'+esc(c)+'</span>'));
+  $('crumbs').innerHTML = parts.join('');
+  const live = session.mode === 'LIVE';
+  $('livePill').className = 'pill ' + (live ? 'live' : 'demo');
+  $('livePillText').textContent = live ? 'Live'
+    : (session.mode === 'SNAPSHOT' ? 'Snapshot' : 'Demo data');
+}
+
+/* Derive the balance series from opening balance + flows.
+   This is the single place the forecast math lives. */
+function computeBalances(f) {
+  const out = [];
+  let b = f.openingK;
+  for (let i = 0; i < f.days.length; i++) {
+    b += (f.receiptsK[i] || 0) + (f.paymentsK[i] || 0);
+    out.push(b);
+  }
+  return out;                                  /* SEK k */
+}
+const fmtM = k => 'SEK ' + (k/1000).toFixed(2) + 'M';
+
+function renderOverview() {
+  const d = KVITT_DATA.overview;
+  const f = d.forecast;
+  $('ov-sub').textContent = d.subtitle;
+
+  const balances = computeBalances(f);
+  const lowK = Math.min(...balances);
+
+  $('kpis').innerHTML = d.kpis.map(k => {
+    let value = k.value, note = k.note;
+    if (k.derived === 'opening') value = fmtM(f.openingK);
+    if (k.derived === 'low') {
+      value = fmtM(lowK);
+      note = f.lowLabel + ' \u2014 ' + (lowK < f.bufferK ? 'below buffer' : 'above buffer');
+    }
+    return `
+    <div class="kpi">
+      <div class="k-label">${esc(k.label)}</div>
+      <div class="k-value">${esc(value)}</div>
+      <div class="k-note ${k.tone}">${esc(note)}</div>
+    </div>`;
+  }).join('');
+
+  $('forecastChart').innerHTML = forecastSVG(f, balances);
+
+  const cell = (v,cls) => v==null ? '<td>\u2013</td>'
+    : `<td class="${cls}">${v>0?'+':''}${v}k</td>`;
+  $('flowTable').innerHTML =
+    '<tr><td class="row-label"></td>' + f.days.map((day,i) =>
+      `<th class="${i===f.highlightDay?'hl':''}">${day}<br>${f.dates[i]}</th>`).join('') + '</tr>' +
+    '<tr class="receipts"><td class="row-label">Receipts</td>' +
+      f.receiptsK.map(v=>cell(v,'pos')).join('') + '</tr>' +
+    '<tr class="payments"><td class="row-label">Payments</td>' +
+      f.paymentsK.map(v=>cell(v,'neg')).join('') + '</tr>';
+
+  const q = d.actionQueue;
+  $('aqCount').textContent = `${q.openCount} open \u00b7 ${q.highPriority} high priority`;
+  $('actionQueue').innerHTML = q.items.map((a,i) => `
+    <div class="aq-item ${a.highlighted?'hl':''}" data-target="${a.target||''}" role="button" tabindex="0">
+      <span class="aq-dot ${a.tone==='red'?'red':'amber'}"></span>
+      <div class="aq-title"><span class="verb ${a.tone}">${esc(a.verb)}</span><span class="who">${esc(a.who)}</span></div>
+      <div class="aq-amount">${esc(a.amount)}</div>
+      <div class="aq-why">${esc(a.why)}</div>
+      <div class="aq-foot">
+        <span class="aq-impact ${a.impactTone}">${esc(a.impact)}</span>
+        <button class="btn">${esc(a.cta)}</button>
+      </div>
+    </div>`).join('')
+    + (q.moreCount ? `<div style="padding:12px 10px"><a href="#" onclick="toast('The full queue is not implemented in this mockup');return false" style="font-weight:600">+ ${q.moreCount} more actions</a></div>` : '');
+  document.querySelectorAll('.aq-item').forEach(el => {
+    const go = () => { if (el.dataset.target) showScreen(el.dataset.target); else toast('This detail view is not implemented in this mockup'); };
+    el.addEventListener('click', go);
+    el.addEventListener('keydown', e => { if (e.key==='Enter') go(); });
+  });
+}
+
+function renderActionDetail() {
+  const d = KVITT_DATA.actionDetail, inv = d.invoice, cs = d.customerStats;
+  $('ad-title').textContent = d.customer;
+  $('ad-sub').textContent = `Invoice ${inv.reference}  \u00b7  ${inv.amountDisplay}  \u00b7  ${inv.daysOverdue} days overdue`;
+  $('ad-badges').innerHTML = d.badges.map(b => `<span class="badge ${b.tone}">${esc(b.text)}</span>`).join('');
+  $('ad-callout').innerHTML = `<span class="ci">i</span><div><b>${esc(d.recommendation.title)}</b><span style="color:var(--muted);font-size:13.5px">${esc(d.recommendation.body)}</span></div>`;
+
+  const rows = [
+    ['Invoice amount', inv.amountDisplay, '', 'Due date', inv.dueDate, ''],
+    ['Days overdue', inv.daysOverdue + ' days', 'red', 'Open exposure', inv.openExposure, ''],
+    ['Historical median delay', cs.historicalMedianDelay, '', 'Last payment delay', cs.lastPaymentDelay, ''],
+    ['Matching payment', inv.matchingPayment, 'red', 'Payment terms', inv.paymentTerms, '']
+  ];
+  $('ad-summary').innerHTML = rows.map(r => `
+    <tr><td class="k">${esc(r[0])}</td><td class="v ${r[2]}">${esc(r[1])}</td>
+        <td class="k">${esc(r[3])}</td><td class="v ${r[5]}">${esc(r[4])}</td></tr>`).join('');
+
+  $('delayChart').innerHTML = delaySVG(cs.invoices);
+  $('ad-delay-caption').textContent = d.delayCaption;
+  $('ad-why').innerHTML = d.why.map(w => `<li>${esc(w)}</li>`).join('');
+  $('ad-sources').innerHTML = d.sources.map(s =>
+    `<span class="src-chip"><span class="s-dot"></span><b>${esc(s.name)}</b><span class="t">\u00b7 ${esc(s.synced)}</span></span>`).join('')
+    + `<a href="#" style="margin-left:auto;font-weight:700" onclick="showScreen('trace');return false">View decision trace \u2192</a>`;
+
+  $('draftTo').value = d.draft.to;
+  $('draftSubject').value = d.draft.subject;
+  $('draftBody').value = d.draft.body;
+}
+
+function renderBenchmarks() {
+  const d = KVITT_DATA.benchmarks;
+  $('bm-sub').textContent = d.subtitle;
+  $('bm-company').textContent = KVITT_DATA.meta.company;
+  $('bmCards').innerHTML = d.cards.map(c => `
+    <div class="card bm-card">
+      <div class="b-label">${esc(c.label)}</div>
+      <div class="b-value">${esc(c.value)}</div>
+      <div class="b-delta"><span class="d ${c.deltaTone}">${esc(c.delta)}</span><span class="badge ${c.badgeTone}">${esc(c.badge)}</span></div>
+      <div class="bm-bar">
+        <span class="tick" style="left:${c.tick*100}%"></span>
+        <span class="pos-dot" style="left:${c.pos*100}%;background:${c.dotTone==='red'?'var(--red)':c.dotTone==='green'?'var(--green)':'var(--ink)'}"></span>
+      </div>
+      <div class="b-median">${esc(c.median)}</div>
+    </div>`).join('');
+
+  $('seasonalChart').innerHTML = seasonalSVG(d.seasonal);
+  $('bm-caption').textContent = d.seasonal.caption;
+
+  $('bmTable').innerHTML = d.industries.map(r => `
+    <tr class="${r.tone==='suppressed'?'suppressed':''}">
+      <td>${esc(r.name)}</td>
+      <td class="delay" style="color:${r.tone==='red'?'var(--red)':r.tone==='amber'?'var(--amber)':r.tone==='green'?'var(--green)':'inherit'}">${esc(r.delay)}</td>
+      <td class="members">${r.members}</td>
+    </tr>`).join('');
+  $('bmSuppressNote').textContent = d.suppressNote;
+}
+
+function renderTrace() {
+  const d = KVITT_DATA.decisionTrace;
+  $('tr-title').textContent = d.title;
+  $('tr-sub').textContent = d.subtitle;
+  $('traceTimeline').innerHTML = d.timeline.map(t => `
+    <li class="tl-item ${t.final?'final':''}">
+      <span class="tl-dot"></span>
+      <div class="tl-row"><span class="tl-title">${esc(t.title)}</span><span class="tl-src">${esc(t.src)} \u00b7 ${esc(t.time)}</span></div>
+      <div class="tl-detail">${esc(t.detail)}</div>
+    </li>`).join('');
+  $('ruleBox').textContent = d.rule;
+  $('traceMeta').innerHTML = d.metadata.map(m => `
+    <li><div class="m-k">${esc(m.k)}</div>
+        <div class="m-v">${m.dot?'<span class="m-dot '+m.dot+'"></span>':''}${esc(m.v)}</div></li>`).join('');
+}
+
+/* ── SVG charts (built from data, no libraries) ── */
+function forecastSVG(f, balancesK) {
+  const W=640,H=300,PL=44,PR=14,PT=12,PB=44;
+  const balM = balancesK.map(k=>k/1000), bufM = f.bufferK/1000;
+  const n=balM.length;
+  const lo=Math.min(...balM, bufM), hi=Math.max(...balM, bufM);
+  const min=Math.floor((lo-0.15)*5)/5, max=Math.ceil((hi+0.15)*5)/5;
+  const x=i=>PL+(W-PL-PR)*i/(n-1);
+  const y=v=>PT+(H-PT-PB)*(1-(v-min)/(max-min));
+  let g='';
+  for(let v=min;v<=max+0.001;v+=0.2){
+    g+=`<line x1="${PL}" y1="${y(v)}" x2="${W-PR}" y2="${y(v)}" stroke="var(--line-soft)"/>`
+      +`<text x="${PL-8}" y="${y(v)+4}" font-size="11" fill="var(--muted-2)" text-anchor="end">${v.toFixed(1)}</text>`;
+  }
+  let xs='';
+  for(let i=0;i<n;i++) xs+=`<text x="${x(i)}" y="${H-PB+18}" font-size="11" fill="${i===f.highlightDay?'var(--red)':'var(--muted)'}" font-weight="${i===f.highlightDay?'700':'400'}" text-anchor="middle">${f.dates[i]}</text>`;
+  const line=a=>a.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
+  const dots=(a,c)=>a.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="3.4" fill="${c}"/>`).join('');
+  const buf=balM.map(()=>bufM);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="14-day cash forecast, projected balance vs minimum buffer">
+    ${g}
+    <text x="14" y="${H/2}" font-size="11" fill="var(--muted)" transform="rotate(-90 14 ${H/2})" text-anchor="middle">SEK M</text>
+    <path d="${line(buf)}" stroke="var(--muted-2)" stroke-width="3" fill="none"/>
+    ${dots(buf,'var(--muted-2)')}
+    <path d="${line(balM)}" stroke="var(--blue)" stroke-width="3" fill="none" stroke-linejoin="round"/>
+    ${dots(balM,'var(--blue)')}
+    ${xs}
+    <text x="${(PL+W-PR)/2}" y="${H-6}" font-size="12" fill="var(--muted)" text-anchor="middle">${esc(f.monthLabel)}</text>
+  </svg>`;
+}
+
+function delaySVG(invoices) {
+  const W=620,H=150,PB=30,PT=20,gap=32,bw=54;
+  const max=Math.max(...invoices.map(v=>v.days));
+  const total=invoices.length*bw+(invoices.length-1)*gap;
+  const x0=(W-total)/2;
+  let bars='';
+  invoices.forEach((inv,i)=>{
+    const h=Math.max(6,(H-PT-PB)*inv.days/max);
+    const x=x0+i*(bw+gap), y=H-PB-h;
+    bars+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="2" fill="${inv.current?'var(--red)':'#aab3bd'}"/>`
+      +`<text x="${x+bw/2}" y="${y-6}" font-size="12" font-weight="700" fill="var(--ink)" text-anchor="middle">${inv.days}</text>`
+      +`<text x="${x+bw/2}" y="${H-8}" font-size="10.5" fill="${inv.current?'var(--red)':'var(--muted)'}" font-weight="${inv.current?'700':'400'}" text-anchor="middle">${esc(inv.ref)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Days late per invoice for this customer; settled invoices in grey, the unpaid current invoice in red">
+    <line x1="10" y1="${H-PB}" x2="${W-10}" y2="${H-PB}" stroke="var(--line)"/>${bars}</svg>`;
+}
+
+function seasonalSVG(s) {
+  const W=640,H=260,PL=40,PR=14,PT=10,PB=30;
+  const n=s.months.length, min=60, max=120;
+  const x=i=>PL+(W-PL-PR)*i/(n-1);
+  const y=v=>PT+(H-PT-PB)*(1-(v-min)/(max-min));
+  let g='';
+  for(let v=60;v<=120;v+=10){
+    g+=`<line x1="${PL}" y1="${y(v)}" x2="${W-PR}" y2="${y(v)}" stroke="var(--line-soft)"/>`
+      +`<text x="${PL-8}" y="${y(v)+4}" font-size="11" fill="var(--muted-2)" text-anchor="end">${v}</text>`;
+  }
+  let xs=s.months.map((m,i)=>`<text x="${x(i)}" y="${H-8}" font-size="11" fill="var(--muted)" text-anchor="middle">${m}</text>`).join('');
+  const line=a=>a.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
+  const dots=(a,c)=>a.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${c}"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Seasonal cash-flow pattern, indexed to 100">
+    ${g}
+    <text x="12" y="${H/2}" font-size="10.5" fill="var(--muted)" transform="rotate(-90 12 ${H/2})" text-anchor="middle">Net cash flow, indexed (100 = 12-month avg)</text>
+    <path d="${line(s.industry)}" stroke="var(--muted-2)" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+    ${dots(s.industry,'var(--muted-2)')}
+    <path d="${line(s.company)}" stroke="var(--blue)" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+    ${dots(s.company,'var(--blue)')}
+    ${xs}
+  </svg>`;
+}
+
+/* ── Navigation ── */
+/* Functions, not arrays: two of these name the customer on screen, which
+   changes with the data set. */
+const CRUMBS = {
+  overview:   () => [],
+  action:     () => ['Actions', KVITT_DATA.actionDetail.customer],
+  benchmarks: () => ['Benchmarks'],
+  trace:      () => [KVITT_DATA.actionDetail.customer, 'Decision trace'],
+  next:       () => ['Next steps']
+};
+const NAV_FOR = { overview:'overview', action:'action', benchmarks:'benchmarks', trace:'action', next:'next' };
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  $('screen-'+name).classList.add('on');
+  document.querySelectorAll('.nav-item').forEach(b=>
+    b.classList.toggle('active', b.dataset.screen===NAV_FOR[name]));
+  renderTopbar(CRUMBS[name]());
+  window.scrollTo(0,0);
+}
+
+document.querySelectorAll('.nav-item').forEach(b=>{
+  b.addEventListener('click',()=>{
+    if(b.dataset.screen==='_stub'){ toast(b.dataset.name+' is not implemented in this mockup'); return; }
+    showScreen(b.dataset.screen);
+  });
+});
+
+/* ── Toast ── */
+let toastTimer;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+/* ── Boot ── */
+function renderAll(){
+  renderTopbar(CRUMBS.overview());
+  renderOverview();
+  renderActionDetail();
+  renderBenchmarks();
+  renderTrace();
+}
+renderAll();
+</script>
+
+<!-- Backend client and live data merge. Served from webapp/ by serve.py. -->
+<script src="backend.js"></script>
+<script src="zwapgrid.js"></script>
+<script src="openpayments.js"></script>
+<script src="kvitt-live.js"></script>
+</body>
+</html>

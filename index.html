@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kvitt: from cash visibility to action</title>
+<meta name="description" content="Kvitt reconciles ERP obligations (Zwapgrid) with bank reality (Open Payments) into a live cash position, prioritized explainable actions and industry benchmarks.">
+<style>
+  :root{
+    --blue:#1f4e9c; --blue-dark:#173d7c; --blue-soft:#dbe6f6; --blue-pale:#eaf1fb;
+    --red:#b32424; --red-soft:#f6dcdc; --amber:#8a6d1a; --amber-soft:#f3ead0;
+    --green:#1c7a3d; --green-soft:#ddefe2;
+    --ink:#1c2430; --muted:#6b7684; --muted-2:#9aa4b0; --line:#e4e8ee; --line-soft:#eef1f5;
+    --bg:#fbfcfe; --radius:8px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);color:var(--ink);background:var(--bg);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  header{border-bottom:1px solid var(--line);background:#fff}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand-mark{width:28px;height:28px;border-radius:7px;background:var(--blue);position:relative}
+  .brand-mark::after{content:"";position:absolute;inset:6px;border-radius:3px;background:#fff;opacity:.92;clip-path:polygon(0 0,100% 0,100% 55%,55% 55%,55% 100%,0 100%)}
+  .brand-name{font-size:21px;font-weight:800}
+  .topnav{display:flex;gap:22px;font-size:14px;font-weight:600}
+  .badge{display:inline-block;border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:700}
+  .badge.blue{background:var(--blue-soft);color:var(--blue-dark)} .badge.green{background:var(--green-soft);color:var(--green)}
+  .badge.amber{background:var(--amber-soft);color:var(--amber)} .badge.gray{background:var(--line-soft);color:var(--muted)}
+  .hero{padding:64px 0 40px;display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center}
+  h1{font-size:44px;line-height:1.12;letter-spacing:-.6px;margin:14px 0 14px}
+  .lead{font-size:19px;color:var(--muted);max-width:540px}
+  .cta{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+  .btn{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:var(--radius);padding:11px 18px;font-size:15px;font-weight:700;color:var(--ink)}
+  .btn:hover{border-color:var(--muted-2);text-decoration:none}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn.primary:hover{background:var(--blue-dark)}
+  .hero-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:0 10px 30px rgba(20,40,80,.06)}
+  .hero-card .k{color:var(--muted);font-size:13px}
+  .hero-card .v{font-size:26px;font-weight:800;letter-spacing:-.3px}
+  .hero-card .n{font-size:13px;font-weight:600}
+  .hero-card .n.red{color:var(--red)} .hero-card .n.amber{color:var(--amber)}
+  .hero-kpis{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;margin-bottom:14px}
+  .aq-item{border-top:1px solid var(--line);padding:10px 0;display:flex;justify-content:space-between;gap:10px;font-size:14px}
+  .aq-item .verb{font-weight:800} .aq-item .verb.red{color:var(--red)} .aq-item .verb.amber{color:var(--amber)}
+  .aq-item .why{color:var(--muted);font-size:13px}
+  section{padding:44px 0;border-top:1px solid var(--line)}
+  h2{font-size:28px;letter-spacing:-.3px;margin-bottom:8px}
+  .sub{color:var(--muted);margin-bottom:26px;max-width:720px}
+  .video{background:#0f1720;border-radius:12px;overflow:hidden;aspect-ratio:16/9;box-shadow:0 20px 50px rgba(10,20,40,.18)}
+  .video video,.video iframe{width:100%;height:100%;display:block;border:0}
+  .cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px}
+  .card .num{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+  .card h3{font-size:18px;margin-bottom:6px}
+  .card p{color:var(--muted);font-size:14.5px}
+  .card .src{margin-top:12px;font-size:12.5px;color:var(--muted-2)}
+  .cols2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  ul.list{list-style:none;margin-top:10px}
+  ul.list li{position:relative;padding:5px 0 5px 20px;font-size:14.5px}
+  ul.list li::before{content:"";position:absolute;left:2px;top:13px;width:7px;height:7px;border-radius:50%;background:var(--blue)}
+  .callout{display:flex;gap:12px;background:var(--blue-pale);border:1px solid var(--blue-soft);border-radius:10px;padding:14px 16px;margin-top:22px;font-size:14.5px}
+  .callout b{display:block;margin-bottom:2px}
+  .rule{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;margin-top:14px}
+  .surf{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .surf .card h3{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  footer{border-top:1px solid var(--line);padding:28px 0 48px;color:var(--muted);font-size:13.5px}
+  footer .row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  @media (max-width:860px){.hero{grid-template-columns:1fr;padding-top:40px}h1{font-size:34px}.cols3,.cols2,.surf{grid-template-columns:1fr}.topnav{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap topbar">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">Kvitt</div></div>
+    <nav class="topnav">
+      <a href="#demo">Demo video</a>
+      <a href="#how">How it works</a>
+      <a href="#tech">Open Payments &amp; Zwapgrid</a>
+      <a href="#next">What's next</a>
+      <a href="kvitt.html">Open the product mockup →</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <span class="badge blue">Embedded Finance Build Day · 25 August 2026</span>
+      <h1>From cash visibility to action.</h1>
+      <p class="lead">Kvitt reconciles ERP and bank data in real time and turns it straight into action: which invoice to chase, which payment can wait, ranked by what actually moves the cash buffer. Action today, intelligence that compounds tomorrow.</p>
+      <div class="cta">
+        <a class="btn primary" href="#demo">Watch the 2-minute demo</a>
+        <a class="btn" href="kvitt.html">Try the interactive mockup</a>
+      </div>
+      <p style="margin-top:14px;font-size:13px;color:var(--muted-2)">Built on <b>Open Payments</b> (bank data) and <b>Zwapgrid</b> (ERP data). Demo scenario runs on clearly labelled synthetic data.</p>
+    </div>
+    <div class="hero-card" aria-label="Preview of the Kvitt cash overview">
+      <div class="hero-kpis">
+        <div><div class="k">Available cash</div><div class="v">SEK 2.48M</div><div class="n" style="color:var(--muted)">Open Payments · 09:14 today</div></div>
+        <div><div class="k">14-day low</div><div class="v">SEK 1.32M</div><div class="n red">Fri, Sep 4, below buffer</div></div>
+        <div><div class="k">Overdue receivables</div><div class="v">SEK 3.76M</div><div class="n amber">28 customers · Zwapgrid</div></div>
+        <div><div class="k">Open actions</div><div class="v">7</div><div class="n red">3 high priority</div></div>
+      </div>
+      <div class="aq-item"><div><span class="verb red">Contact</span> Customer A<div class="why">45 days overdue · no matching payment</div></div><b>SEK 78,450</b></div>
+      <div class="aq-item"><div><span class="verb amber">Hold</span> Supplier B<div class="why">Due tomorrow · paying now deepens Friday's breach</div></div><b>SEK 42,000</b></div>
+      <div class="aq-item"><div><span class="verb amber">Review</span> Customer C<div class="why">Payment delay increased from 4 to 18 days</div></div><b></b></div>
+    </div>
+  </div>
+
+  <section id="demo">
+    <h2>Demo</h2>
+    <p class="sub">Two minutes: the problem, the product loop inside the mockup, and proof that both technologies were exercised.</p>
+    <div class="video">
+      <!-- VIDEO_EMBED_START -->
+      <video controls preload="metadata" poster="poster.jpg" src="kvitt-demo.mp4"></video>
+      <!-- VIDEO_EMBED_END -->
+    </div>
+  </section>
+
+  <section id="how">
+    <h2>One product, three effects</h2>
+    <p class="sub">ERP knows what is owed. The bank knows what arrived. Nothing puts them together in time to act, and no company can see its own numbers in context.</p>
+    <div class="cols3">
+      <div class="card"><div class="num">1</div><h3>See: one cash position</h3><p>Every invoice, payment and bank balance is reconciled continuously into one 14-day cash view, not an end-of-month report.</p><div class="src">Zwapgrid ERP + Open Payments</div></div>
+      <div class="card"><div class="num">2</div><h3>Act: prioritized, explainable actions</h3><p>Deterministic rules recommend what to do next and why. AI drafts how to communicate with your customer, and you set the tone and approve. A full decision trace sits behind every call.</p><div class="src">Kvitt engine · Rule KV-AR-001</div></div>
+      <div class="card"><div class="num">3</div><h3>Compare: industry benchmarks</h3><p>Payment delay, DSO and cash-buffer insights aggregated across members with k = 5 suppression. Sharper with every member that joins.</p><div class="src">128 members · 9 industries</div></div>
+    </div>
+    <div class="callout"><div><b>Rules for money and permissions. AI for language and interpretation.</b>An LLM never invents a balance or moves money. AI drafts how to communicate with your customer, and the human adjusts, sets the tone and approves before anything is sent. Every recommendation carries its rule, its sources and its timestamps.</div></div>
+    <div class="rule">Rule KV-AR-001 (deterministic): overdue &gt; 0 AND no matching payment AND delay &gt; 1.5× historical median AND impact = high → recommend contact</div>
+  </section>
+
+  <section id="tech">
+    <h2>Built on Open Payments and Zwapgrid</h2>
+    <p class="sub">Both integrations run against the real sandboxes, and the application has been exercised on that real test data. Because the sandboxes lack enough history for one coherent cash story, the demo visualises the story with clearly labelled mockup data on top of the proven API access.</p>
+    <div class="cols2">
+      <div class="card">
+        <h3><span class="badge green">Verified</span>&nbsp; Open Payments: bank-side reality</h3>
+        <ul class="list">
+          <li>Application authenticated with the <b>Account Information</b> (corporate) scope</li>
+          <li>Swedbank sandbox consent: SCA <b>finalised</b>, consent <b>valid</b></li>
+          <li>7 accounts, balances and 9 booked transactions retrieved</li>
+          <li>Feeds available cash, transaction-to-invoice matching and the "no matching payment" evidence in each recommendation</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="badge green">Verified</span>&nbsp; Zwapgrid: accounting-side obligations</h3>
+        <ul class="list">
+          <li>Development API key verified, and the Test.1 consent reached <b>ACCEPTED</b></li>
+          <li>7 sales invoices from 6 customers and 3 supplier invoices retrieved</li>
+          <li>Reference, counterparty, dates, amount, currency and payment status</li>
+          <li>Feeds receivables, payables, the forecast flows and the action queue</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--muted)">Provenance is explicit in the product: every figure is <span class="badge green">LIVE</span> <span class="badge gray">SNAPSHOT</span> <span class="badge amber">SYNTHETIC</span> or <span class="badge blue">DERIVED</span>, and the interface says so.</p>
+  </section>
+
+  <section id="next">
+    <h2>What's next: the remaining surfaces</h2>
+    <p class="sub">Four categories not yet built. Each runs on the same two inputs, reconciled ERP and bank data, and feeds the same two outputs: a prioritized action and a contribution to the benchmark.</p>
+    <div class="surf">
+      <div class="card"><h3>Cash Forecast <span class="badge blue">CFO asks for this</span></h3><p>A 13-week projection built from each customer's observed payment behaviour and, where there is no history, the industry's benchmark delay. Due dates lie. Behaviour does not.</p></div>
+      <div class="card"><h3>Receivables <span class="badge blue">CFO asks for this</span></h3><p>Every open invoice scored against the customer's own history and its industry benchmark, so collection effort goes only to the invoices that actually move the buffer.</p></div>
+      <div class="card"><h3>Payables <span class="badge gray">Supporting surface</span></h3><p>The only side of the buffer a company fully controls. Kvitt ranks which payments can slide without breaching agreed terms. Deterministic rules, never a model's guess.</p></div>
+      <div class="card"><h3>Reports <span class="badge gray">Supporting surface</span></h3><p>Board- and bank-ready packs where every figure traces back to the ERP row and the bank transaction behind it, and every benchmark states how many members it was computed from.</p></div>
+    </div>
+    <div class="callout"><div><b>Secure aggregation &amp; benchmarking</b>Members contribute anonymised, standardised signals. Aggregates are released only where at least five members contribute to a segment. Below that the segment is suppressed, so no single company's position can be derived. Each company receives more intelligence than it contributes.</div></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap row">
+    <div><b style="color:var(--ink)">Kvitt</b> · Embedded Finance Build Day, The Operator Network · Stockholm, 25 August 2026</div>
+    <div><a href="kvitt.html">Interactive mockup</a> · <a href="Kvitt_Product_Mockup.pdf">Product deck (PDF)</a></div>
+  </div>
+</footer>
+</body>
+</html>
